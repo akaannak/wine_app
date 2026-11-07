@@ -6,12 +6,68 @@ import json
 from pathlib import Path
 from sklearn import metrics
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
+
+WINE = "#722F37"
+BURGUNDY = "#4A1025"
+ROSE = "#C77D8D"
+CREAM = "#FFF8F3"
+PLUM = "#8E5572"
+GOLD = "#C6A667"
+
+plt.rcParams.update({
+    "figure.facecolor": CREAM,
+    "axes.facecolor": CREAM,
+    "axes.edgecolor": ROSE,
+    "axes.labelcolor": BURGUNDY,
+    "text.color": BURGUNDY,
+    "xtick.color": BURGUNDY,
+    "ytick.color": BURGUNDY,
+    "grid.color": "#E8CCD2",
+    "grid.alpha": 0.5,
+    "font.size": 11
+})
 
 st.set_page_config(
     page_title="Wine Quality",
     page_icon="🍷",
     layout="wide"
 )
+st.markdown("""
+<style>
+.stApp {
+    background-color: #FFF8F3;
+    color: #4A1025;
+}
+
+h1, h2, h3 {
+    color: #722F37 !important;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #F5E6E8;
+}
+
+div[data-testid="stMetric"] {
+    background-color: #F9EAEC;
+    border: 1px solid #C77D8D;
+    border-radius: 15px;
+    padding: 15px;
+}
+
+.stButton > button {
+    background-color: #722F37;
+    color: white;
+    border-radius: 12px;
+}
+
+.stButton > button:hover {
+    background-color: #4A1025;
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
 
 APP_DIR = Path(__file__).resolve().parent
 
@@ -37,8 +93,13 @@ def test_proba(_model, X):
 features = df.drop(columns="target")
 
 default_threshold = float(config["threshold"])
-st.title("🍷 Wine Quality")
-st.write("Приложение для оценки качества вина")
+col_title, col_hippo = st.columns([5, 1])
+with col_title:
+    st.title("🍷 Wine Quality")
+    st.write("Приложение для оценки качества вина")
+
+with col_hippo:
+    st.image(str(APP_DIR / "hippo_icon.png"), width=100)
 st.sidebar.header("Настройки модели")
 
 threshold = st.sidebar.slider(
@@ -89,16 +150,22 @@ with tab1:
     prediction = int(probability >= threshold)
 
     st.subheader("Результат оценки")
+    col_result, col_mascot = st.columns([3, 1])
+    with col_result:
+        st.metric(
+            "Вероятность хорошего вина",
+            f"{probability:.1%}"
+        )
 
-    st.metric(
-        "Вероятность хорошего вина",
-        f"{probability:.1%}"
-    )
-
-    if prediction == 1:
-        st.success("Вино рекомендуется к подборке!")
-    else:
-        st.warning("Вино не рекомендуется к подборке.")
+        if prediction == 1:
+            st.success("🍷 Отличный выбор! Вино рекомендуется!")
+        else:
+            st.warning("Вино не рекомендуется к подборке.")
+    with col_mascot:
+        st.image(
+            str(APP_DIR / "hippo_wine.png"),
+            width=180
+        )
 
     st.write(f"Порог классификации: {threshold:.3f}")
 
@@ -143,8 +210,23 @@ with tab2:
         display_labels=[0, 1]
     )
 
-    disp.plot(ax=ax_cm, cmap="Blues", colorbar=False)
-    ax_cm.set_title("Confusion Matrix")
+    wine_cmap = LinearSegmentedColormap.from_list(
+    "wine",
+    ["#FFF0F2", "#C77D8D", "#722F37", "#4A1025"]
+    )
+
+    disp.plot(
+        ax=ax_cm,
+        cmap=wine_cmap,
+        colorbar=False
+    )
+
+    ax_cm.set_title(
+        "Матрица ошибок",
+        color=WINE,
+        fontsize=15,
+        fontweight="bold"
+    )
 
     st.pyplot(fig_cm)
     plt.close(fig_cm)
@@ -163,7 +245,13 @@ with tab2:
     with col_roc:
         fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
 
-        ax_roc.plot(fpr, tpr, label="ROC")
+        ax_roc.plot(
+            fpr,
+            tpr,
+            color=WINE,
+            linewidth=3,
+            label="ROC"
+        )
         ax_roc.plot([0, 1], [0, 1], "--", color="gray")
 
         ax_roc.scatter(
@@ -187,7 +275,13 @@ with tab2:
     with col_pr:
         fig_pr, ax_pr = plt.subplots(figsize=(6, 5))
 
-        ax_pr.plot(pr_recall, pr_precision, label="PR")
+        ax_pr.plot(
+            pr_recall,
+            pr_precision,
+            color=PLUM,
+            linewidth=3,
+            label="Precision-Recall"
+        )
 
         ax_pr.axhline(
             y_test.mean(),
@@ -199,7 +293,7 @@ with tab2:
         ax_pr.scatter(
             recall,
             precision,
-            color="red",
+            color=GOLD,
             s=90,
             label=f"Threshold = {threshold:.3f}",
             zorder=5
@@ -327,7 +421,7 @@ with tab4:
         "Коэффициент": coefficients
     }).sort_values("Коэффициент")
     colors = [
-        "seagreen" if coef > 0 else "tomato"
+        WINE if coef > 0 else ROSE
         for coef in coef_df["Коэффициент"]
     ]
     fig, ax = plt.subplots(figsize=(10, 7))
